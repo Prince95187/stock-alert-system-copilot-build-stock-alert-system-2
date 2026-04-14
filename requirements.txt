@@ -1,0 +1,17 @@
+# Web server
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+
+# Async WebSocket client (ingestion)
+websockets==13.1
+
+# Schema / config validation
+pydantic==2.10.6
+pydantic-settings==2.8.1
+
+# Environment variable loading
+python-dotenv==1.0.1
+
+# Testing
+pytest==8.3.5
+pytest-asyncio==0.25.3

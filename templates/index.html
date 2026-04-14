@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StockAlert — Real-time Alert Dashboard</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <!-- Preconnect for Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+</head>
+<body>
+
+<!-- ── Navigation ─────────────────────────────────────────────── -->
+<header>
+  <nav class="nav">
+    <a class="nav-logo" href="/">
+      <span class="logo-icon">⚡</span>
+      <span>Stock<span class="gradient-text">Alert</span></span>
+    </a>
+
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="nav-badge">
+        <span class="live-dot" id="live-dot"></span>
+        <span id="live-label">Connecting…</span>
+      </div>
+      <div class="nav-badge" style="gap:6px;">
+        <span style="color:var(--t3);">Engine</span>
+        <span style="color:var(--purple);font-weight:800;">8 shards</span>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<!-- ── Ticker tape ─────────────────────────────────────────────── -->
+<div class="ticker-tape-wrap">
+  <div class="ticker-tape" id="ticker-tape-inner">
+    <!-- Populated by JS -->
+    <div class="ticker-item">
+      <span class="ticker-symbol">LOADING</span>
+      <span class="ticker-price">—</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main content ────────────────────────────────────────────── -->
+<main class="container" style="padding-top:32px;padding-bottom:40px;">
+
+  <!-- Hero stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Active Rules</div>
+      <div class="stat-value gradient-text" id="stat-total-alerts">—</div>
+      <div class="stat-sub">alert rules configured</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Triggered Today</div>
+      <div class="stat-value gradient-text-hot" id="stat-triggered-today">—</div>
+      <div class="stat-sub">alerts fired so far</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Tickers Tracked</div>
+      <div class="stat-value" style="color:var(--cyan);" id="stat-tickers">—</div>
+      <div class="stat-sub">live price streams</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Latency Target</div>
+      <div class="stat-value" style="color:var(--green);">&lt;500<span style="font-size:1rem;font-weight:600;">ms</span></div>
+      <div class="stat-sub">alert processing SLA</div>
+    </div>
+  </div>
+
+  <!-- Live prices -->
+  <div class="section-header">
+    <h2 class="section-title">Live Prices</h2>
+    <span class="section-count" id="tracked-count">0 tickers</span>
+  </div>
+  <div class="prices-grid" id="prices-grid">
+    <!-- Populated by JS -->
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Main two-column grid -->
+  <div class="main-grid">
+
+    <!-- Left: Alert rules + feed -->
+    <div>
+
+      <!-- Active rules -->
+      <div class="section-header">
+        <h2 class="section-title">Active Alert Rules</h2>
+        <span class="section-count" id="rule-count">0</span>
+      </div>
+      <div class="rules-list" id="rules-list">
+        <div class="empty-state">
+          <div class="empty-icon">📋</div>
+          <div class="empty-text">Loading rules…</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Triggered alerts feed -->
+      <div class="section-header">
+        <h2 class="section-title">Triggered Alerts</h2>
+        <span class="section-count" id="alert-count">0</span>
+      </div>
+      <div class="alerts-feed" id="alerts-feed">
+        <div class="empty-state">
+          <div class="empty-icon">🔔</div>
+          <div class="empty-text">No alerts triggered yet.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right: Add rule form -->
+    <div>
+      <div class="card" style="position:sticky;top:80px;">
+        <div class="section-header" style="margin-bottom:20px;">
+          <h2 class="section-title">Add Alert Rule</h2>
+        </div>
+
+        <form id="rule-form" class="form-grid" novalidate>
+
+          <!-- Ticker -->
+          <div>
+            <label for="f-ticker">Ticker Symbol</label>
+            <input
+              id="f-ticker"
+              type="text"
+              placeholder="e.g. AAPL, NVDA, TSLA"
+              required
+              maxlength="10"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
+
+          <!-- Rule type -->
+          <div>
+            <label for="f-type">Rule Type</label>
+            <select id="f-type" required>
+              <option value="price_threshold">Price Threshold</option>
+              <option value="percentage_move">Percentage Move</option>
+            </select>
+          </div>
+
+          <!-- Condition + Threshold -->
+          <div class="form-row">
+            <div>
+              <label for="f-condition">Condition</label>
+              <select id="f-condition" required>
+                <option value="above">Rises above</option>
+                <option value="below">Falls below</option>
+              </select>
+            </div>
+            <div>
+              <label for="f-threshold">Threshold</label>
+              <input
+                id="f-threshold"
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="e.g. 180.00"
+                required
+              />
+            </div>
+          </div>
+
+          <!-- Window (percentage move only) -->
+          <div id="window-row" style="display:none;">
+            <label for="f-window">Window (minutes)</label>
+            <input
+              id="f-window"
+              type="number"
+              min="1"
+              max="1440"
+              value="60"
+              placeholder="60"
+            />
+          </div>
+
+          <!-- Optional label -->
+          <div>
+            <label for="f-label">Label <span style="color:var(--t4);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+            <input
+              id="f-label"
+              type="text"
+              placeholder="e.g. AAPL breakout signal"
+              maxlength="80"
+            />
+          </div>
+
+          <button class="btn-primary" id="submit-btn" type="submit">
+            Add Alert Rule
+          </button>
+
+        </form>
+
+        <!-- Architecture note card -->
+        <div style="margin-top:20px;background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.2);border-radius:var(--r-md);padding:14px 16px;">
+          <div style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--purple);margin-bottom:8px;">⚙ Engine Architecture</div>
+          <ul style="font-size:.75rem;color:var(--t3);line-height:1.8;padding-left:1em;">
+            <li>8-shard rule engine — hot-key safe</li>
+            <li>O(1) ticker → rule index lookup</li>
+            <li>Sliding-window % move evaluation</li>
+            <li>Async SSE (&lt;500 ms alert latency)</li>
+            <li>Idempotent notification dispatcher</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /.main-grid -->
+
+</main>
+
+<!-- ── Footer ──────────────────────────────────────────────────── -->
+<footer>
+  StockAlert System · Real-time · Event-Driven · Jitter-inspired UI
+</footer>
+
+<!-- ── Toast container ─────────────────────────────────────────── -->
+<div id="toast-container" aria-live="polite"></div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
